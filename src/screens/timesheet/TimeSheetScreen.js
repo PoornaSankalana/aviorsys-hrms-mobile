@@ -93,10 +93,26 @@ const TimesheetScreen = () => {
     const monthIndex = months.indexOf(month);
     const firstDate = new Date(year, monthIndex, 1);
     const lastDate = new Date(year, monthIndex + 1, 0);
-    return {
-      firstDate: firstDate.toISOString().split("T")[0],
-      lastDate: lastDate.toISOString().split("T")[0],
+
+    const formatDate = (date) => {
+      const d = new Date(date);
+      const month = "" + (d.getMonth() + 1);
+      const day = "" + d.getDate();
+      const year = d.getFullYear();
+
+      return [year, month.padStart(2, "0"), day.padStart(2, "0")].join("-");
     };
+
+    const range = {
+      firstDate: formatDate(firstDate),
+      lastDate: formatDate(lastDate),
+    };
+
+    console.log(`Month: ${month} ${year}`);
+    console.log("First Date:", range.firstDate);
+    console.log("Last Date:", range.lastDate);
+
+    return range;
   };
 
   useEffect(() => {
@@ -228,6 +244,7 @@ const TimesheetScreen = () => {
           PayrollCategory: day.PayrollCategory || "-",
           UnitName: day.UnitName || "-",
           IsHoliDay: day.IsHoliDay || false,
+          TypeTitle: day.TypeTitle || "N/A",
         },
       };
     });
@@ -271,6 +288,7 @@ const TimesheetScreen = () => {
         PayrollCategory: "-",
         UnitName: "-",
         IsHoliDay: false,
+        TypeTitle: "N/A",
       });
       setShowDateDetails(true);
     }
@@ -357,14 +375,18 @@ const TimesheetScreen = () => {
                         ]}
                       >
                         <Text style={styles.statusBadgeText}>
-                          {selectedDate?.PrAb === "Pr"
-                            ? "Present"
+                          {selectedDate?.LeaveAmount != 0
+                            ? selectedDate?.LeaveType
+                            : selectedDate?.DayTitle === "Saturday"
+                            ? "Saturday"
+                            : selectedDate?.DayTitle === "Sunday"
+                            ? "Sunday"
+                            : selectedDate?.IsHoliDay
+                            ? selectedDate.TypeTitle
                             : selectedDate?.PrAb === "Ab"
                             ? "Absent"
-                            : selectedDate?.IsHoliDay
-                            ? "Holiday"
-                            : selectedDate?.LeaveType !== "N/A"
-                            ? selectedDate?.LeaveType
+                            : selectedDate?.PrAb === "Pr"
+                            ? "Present"
                             : "No Record"}
                         </Text>
                       </View>
@@ -797,7 +819,7 @@ const TimesheetScreen = () => {
                       {day.Date}
                     </Text>
                     <Text style={[styles.tableCell, { width: 90 }]}>
-                      {day.DayTitle}
+                      {day.TypeTitle}
                     </Text>
                     <Text style={[styles.tableCell, { width: 70 }]}>
                       {day.PrAb}
