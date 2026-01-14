@@ -3,7 +3,6 @@ import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DropdownModal from "../../components/common/DropdownModal";
 import Loader from "../../components/common/Loader";
 import ProcessingLoader from "../../components/common/ProcessingLoader";
 import api from "../../services/api";
@@ -74,9 +74,9 @@ const LeaveRequestScreen = () => {
     }
   }, [isFocused]);
 
-  useEffect(() => {
-    console.log("Form Data: ", initData.allocTbl);
-  }, [formData]);
+  // useEffect(() => {
+  //   console.log("Form Data: ", initData.allocTbl);
+  // }, [formData]);
 
   useEffect(() => {
     if (formData.endTimeIdx) {
@@ -214,8 +214,6 @@ const LeaveRequestScreen = () => {
                 EntModUserPc: "",
               };
 
-              console.log("Submitting data:", submitData);
-
               // Make API call
               const response = await api.post(
                 API_ENDPOINTS.SUBMIT_LEAVE_REQUEST,
@@ -224,7 +222,6 @@ const LeaveRequestScreen = () => {
 
               setProcessing(false);
 
-              console.log("Response:", response.data);
               const res = Array.isArray(response.data)
                 ? response.data[0]
                 : response.data;
@@ -374,49 +371,6 @@ const LeaveRequestScreen = () => {
       console.error("Error calculating days:", error);
     }
   };
-
-  // Dropdown Modal Component
-  const DropdownModal = ({
-    visible,
-    onClose,
-    title,
-    data,
-    onSelect,
-    displayKey,
-    valueKey,
-  }) => (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
-              <Text style={styles.modalCloseText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalList}>
-            {data.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.modalItem}
-                onPress={() => {
-                  onSelect(item);
-                  onClose();
-                }}
-              >
-                <Text style={styles.modalItemText}>{item[displayKey]}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
 
   if (loading) {
     return <Loader />;
@@ -1029,50 +983,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: COLORS.primary,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.text,
-  },
-  modalCloseButton: {
-    padding: SIZES.sm,
-  },
-  modalCloseText: {
-    fontSize: 24,
-    color: COLORS.textLight,
-  },
-  modalList: {
-    padding: SIZES.md,
-  },
-  modalItem: {
-    padding: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: COLORS.text,
   },
   tableRow: {
     flexDirection: "row",

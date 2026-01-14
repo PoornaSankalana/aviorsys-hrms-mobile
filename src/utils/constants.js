@@ -1,6 +1,5 @@
 // Update this with your actual backend API URL
-export const API_BASE_URL =
-  "https://richard-unpoled-saddeningly.ngrok-free.dev/api";
+export const API_BASE_URL = "http://api-hrms.aviorsys.com/api";
 
 export const API_ENDPOINTS = {
   //auth
@@ -13,7 +12,8 @@ export const API_ENDPOINTS = {
   CALCULATE_NO_OF_DAYS: "/AttAndLeaveReq/CalNoOfDays",
   SUBMIT_LEAVE_REQUEST: "/AttAndLeaveReq/SaveLeaveReq",
   // time sheet
-  TIMESHEET: "/timesheet",
+  GET_YEARS: "/Years",
+  TIMESHEET: "/EssTimeSheet",
   LEAVE_HISTORY: "/leave/history",
 };
 

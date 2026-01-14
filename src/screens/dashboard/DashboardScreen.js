@@ -88,7 +88,6 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    console.log(Platform.OS);
     if (Platform.OS !== "web") {
       Alert.alert(
         "Logout",

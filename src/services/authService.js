@@ -37,6 +37,7 @@ export const login = async (username, password) => {
       };
     }
   } catch (error) {
+    console.log(error);
     if (error.response) {
       // Server responded with error
       return {
