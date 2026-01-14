@@ -180,19 +180,18 @@ const TimesheetScreen = () => {
       // Determine color based on status
       let dotColor = "#D1D5DB"; // Default gray
 
-      if (day.LeaveType && day.LeaveType !== "N/A") {
+      if (day.LeaveAmount != 0) {
         dotColor = "#F59E0B"; // Orange for leave
       } else if (day.DayTitle === "Saturday") {
-        ("#E8EAF6");
-        dotColor = "#9CA3AF";
+        dotColor = "#9CA3AF"; // Gray for Saturday
       } else if (day.DayTitle === "Sunday") {
-        dotColor = "#C5CAE9";
+        dotColor = "#C5CAE9"; // Light blue for Sunday
+      } else if (day.IsHoliDay) {
+        dotColor = "#FBBF24"; // Yellow for holiday
       } else if (day.PrAb === "Ab") {
         dotColor = "#EF4444"; // Red for absent
       } else if (day.PrAb === "Pr") {
         dotColor = "#10B981"; // Green for present
-      } else if (day.IsHoliDay) {
-        dotColor = "#FBBF24"; // Yellow for holiday
       }
 
       // Create the marked date configuration
@@ -237,12 +236,12 @@ const TimesheetScreen = () => {
   };
 
   const getDayColor = (day) => {
-    if (day.LeaveType && day.LeaveType !== "N/A") return "#FFE0B2";
+    if (day.LeaveAmount != 0) return "#FFE0B2";
     if (day.DayTitle === "Saturday") return "#E0F7FA";
     if (day.DayTitle === "Sunday") return "#E8EAF6";
+    if (day.IsHoliDay) return "#FFF59D";
     if (day.PrAb === "Ab") return "#FFCDD2";
     if (day.PrAb === "Pr") return "#C8E6C9";
-    if (day.IsHoliDay) return "#FFF59D";
     return "#FFF";
   };
 
