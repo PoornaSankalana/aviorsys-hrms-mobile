@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Allow HTTP for your API -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">api-hrms.aviorsys.com</domain>
     </domain-config>
+    
+    <!-- Block HTTP for everything else -->
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

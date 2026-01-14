@@ -27,7 +27,6 @@
     },
     "android": {
       "package": "com.aviorsys.aviorsyshrmsmobile",
-      "usesCleartextTraffic": true,
       "networkSecurityConfig": "./android-network-security-config.xml",
       "permissions": [
         "android.permission.INTERNET",
@@ -38,7 +37,11 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": ["expo-router", "expo-dev-client"],
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "./plugins/withNetworkSecurityConfig"
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
