@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import DropdownModal from "../../components/common/DropdownModal";
+import ProcessingLoader from "../../components/common/ProcessingLoader";
 import api from "../../services/api";
 import { API_ENDPOINTS, COLORS, SIZES } from "../../utils/constants";
 
@@ -73,6 +74,7 @@ const TimesheetScreen = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDateDetails, setShowDateDetails] = useState(false);
   const [markedDates, setMarkedDates] = useState({});
+  const [cancellingLeave, setCancellingLeave] = useState(false);
 
   const months = [
     "January",
@@ -107,11 +109,6 @@ const TimesheetScreen = () => {
       firstDate: formatDate(firstDate),
       lastDate: formatDate(lastDate),
     };
-
-    console.log(`Month: ${month} ${year}`);
-    console.log("First Date:", range.firstDate);
-    console.log("Last Date:", range.lastDate);
-
     return range;
   };
 
@@ -184,38 +181,81 @@ const TimesheetScreen = () => {
     }
   };
 
+  const cancelLeave = async (leaveRequestId) => {
+    Alert.alert(
+      "Cancel Leave",
+      "Are you sure you want to cancel this leave request?",
+      [
+        {
+          text: "No",
+          style: "cancel",
+        },
+        {
+          text: "Yes, Cancel",
+          onPress: async () => {
+            setCancellingLeave(true);
+            setShowDateDetails(false);
+            try {
+              const response = await api.post(
+                `${API_ENDPOINTS.CANCEL_LEAVE}?leaveHeaderIdx=${leaveRequestId}`
+              );
+
+              if (response.data[0].rsltType == 1) {
+                setTimeout(() => {
+                  Alert.alert("Success", response.data[0].outputInfo, [
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        loadTimesheet();
+                      },
+                    },
+                  ]);
+                }, 1000);
+              } else {
+                Alert.alert(
+                  "Error",
+                  response.data[0].outputInfo || "Failed to cancel leave"
+                );
+              }
+            } catch (error) {
+              console.error("Error cancelling leave:", error);
+              Alert.alert("Error", "Failed to cancel leave. Please try again.");
+            } finally {
+              setCancellingLeave(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const prepareCalendarData = (data) => {
     const marked = {};
 
     data.forEach((day) => {
       if (!day.Date) return;
 
-      // Ensure date is in YYYY-MM-DD format
       const dateStr = day.Date;
-
-      // Determine color based on status
-      let dotColor = "#D1D5DB"; // Default gray
+      let dotColor = "#D1D5DB";
 
       if (day.LeaveAmount != 0) {
-        dotColor = "#F59E0B"; // Orange for leave
+        dotColor = "#F59E0B";
       } else if (day.DayTitle === "Saturday") {
-        dotColor = "#9CA3AF"; // Gray for Saturday
+        dotColor = "#9CA3AF";
       } else if (day.DayTitle === "Sunday") {
-        dotColor = "#C5CAE9"; // Light blue for Sunday
+        dotColor = "#C5CAE9";
       } else if (day.IsHoliDay) {
-        dotColor = "#FBBF24"; // Yellow for holiday
+        dotColor = "#FBBF24";
       } else if (day.PrAb === "Ab") {
-        dotColor = "#EF4444"; // Red for absent
+        dotColor = "#EF4444";
       } else if (day.PrAb === "Pr") {
-        dotColor = "#10B981"; // Green for present
+        dotColor = "#10B981";
       }
 
-      // Create the marked date configuration
       marked[dateStr] = {
         selected: true,
         selectedColor: dotColor,
         selectedTextColor: "#FFFFFF",
-        // Add custom styles
         customStyles: {
           container: {
             backgroundColor: dotColor,
@@ -226,7 +266,6 @@ const TimesheetScreen = () => {
             fontWeight: "bold",
           },
         },
-        // Store the day data for details
         dayData: {
           Date: day.Date || dateStr,
           DayTitle:
@@ -240,6 +279,8 @@ const TimesheetScreen = () => {
           LeaveType: day.LeaveType || "N/A",
           LeaveAmount: day.LeaveAmount || "0",
           LeaveStatus: day.LeaveStatus || "N/A",
+          LeaveReason: day.Reason || "-",
+          LeaveRequestId: day.LeaveHeaderIdx,
           RequestType: day.RequestType || "-",
           PayrollCategory: day.PayrollCategory || "-",
           UnitName: day.UnitName || "-",
@@ -339,6 +380,12 @@ const TimesheetScreen = () => {
   // Get day details for popup
   const DateDetailsModal = () => {
     if (!showDateDetails) return null;
+
+    const canCancelLeave =
+      selectedDate?.LeaveType &&
+      selectedDate.LeaveType !== "N/A" &&
+      (selectedDate?.LeaveStatus?.toLowerCase() === "pending" ||
+        selectedDate?.LeaveStatus?.toLowerCase() === "confirmed");
 
     return (
       <Modal
@@ -492,6 +539,39 @@ const TimesheetScreen = () => {
                                   </Text>
                                 </View>
                               )}
+                            {selectedDate?.LeaveReason && (
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Reason</Text>
+                                <Text style={styles.detailValue}>
+                                  {selectedDate?.LeaveReason}
+                                </Text>
+                              </View>
+                            )}
+
+                            {canCancelLeave && (
+                              <TouchableOpacity
+                                style={[
+                                  styles.cancelLeaveButton,
+                                  cancellingLeave &&
+                                    styles.cancelLeaveButtonDisabled,
+                                ]}
+                                onPress={() =>
+                                  cancelLeave(selectedDate?.LeaveRequestId)
+                                }
+                                disabled={cancellingLeave}
+                              >
+                                {cancellingLeave ? (
+                                  <ActivityIndicator
+                                    color={COLORS.white}
+                                    size="small"
+                                  />
+                                ) : (
+                                  <Text style={styles.cancelLeaveButtonText}>
+                                    🚫 Cancel Leave Request
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            )}
                           </View>
                         )}
 
@@ -879,6 +959,10 @@ const TimesheetScreen = () => {
 
       {/* Date Details Modal */}
       <DateDetailsModal />
+      <ProcessingLoader
+        visible={cancellingLeave}
+        message="Cancelling Your Leave Request...."
+      />
     </ScrollView>
   );
 };
@@ -1072,7 +1156,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 16,
     width: "100%",
-    maxHeight: "80%",
+    maxHeight: "85%",
     padding: SIZES.lg,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -1247,6 +1331,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
     lineHeight: 20,
+  },
+  cancelLeaveButton: {
+    backgroundColor: COLORS.danger,
+    padding: SIZES.md,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: SIZES.lg,
+    flexDirection: "row",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cancelLeaveButtonDisabled: {
+    opacity: 0.6,
+  },
+  cancelLeaveButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 

@@ -191,7 +191,7 @@ const LeaveRequestScreen = () => {
 
               // Prepare submission data matching the backend model
               const submitData = {
-                LeaveIdx: "0", // New leave request
+                LeaveIdx: initData.prefix?.[0]?.prefix,
                 Year: formData.Year,
                 StartDate: formData.startDate,
                 StartTime: formData.startTimeIdx,
@@ -200,18 +200,10 @@ const LeaveRequestScreen = () => {
                 NoOfDays: parseFloat(formData.numberOfDays) || null,
                 Reason: formData.reason.trim(),
                 LeaveType: formData.leaveTypeIdx,
-                RequestType: 1, // 1 for leave request (you may need to adjust this)
-                EmployeeIdx: 0, // This should come from logged-in user data
                 CoveringPerson: formData.coveringPersonIdx || null,
                 ConfirmPerson: formData.confirmingOfficerIdx,
                 ReportingPerson: formData.reportingOfficerIdx || null,
                 PostReportingPerson: formData.postReportingOfficerIdx || null,
-                CancReason: "",
-                LeaveHeaderIdx: 0,
-                CreateUser: 0, // This should come from logged-in user data
-                CreatePC: "", // This will be set by backend
-                EntModUserIdx: 0,
-                EntModUserPc: "",
               };
 
               // Make API call

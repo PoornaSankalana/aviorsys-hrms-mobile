@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   LEAVE_REQUEST_INIT_DATA: "/AttAndLeaveReq/GetInitialData",
   CALCULATE_NO_OF_DAYS: "/AttAndLeaveReq/CalNoOfDays",
   SUBMIT_LEAVE_REQUEST: "/AttAndLeaveReq/SaveLeaveReq",
+  CANCEL_LEAVE: "/ESSLeaveCancellation/CanPLeave",
   // time sheet
   GET_YEARS: "/Years",
   TIMESHEET: "/EssTimeSheet",

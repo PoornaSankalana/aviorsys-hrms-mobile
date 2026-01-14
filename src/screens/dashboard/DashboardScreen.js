@@ -2,7 +2,6 @@ import { useIsFocused } from "@react-navigation/native";
 import React, { useContext, useEffect, useState } from "react";
 import {
   Alert,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -88,27 +87,7 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    if (Platform.OS !== "web") {
-      Alert.alert(
-        "Logout",
-        "Are you sure you want to logout?",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: "Logout",
-            onPress: () => logout(),
-            style: "destructive",
-          },
-        ],
-        { cancelable: true }
-      );
-    } else {
-      // Fallback to custom modal
-      setShowLogoutModal(true);
-    }
+    setShowLogoutModal(true);
   };
 
   const confirmLogout = () => {

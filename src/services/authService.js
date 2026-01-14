@@ -33,7 +33,7 @@ export const login = async (username, password) => {
     } else {
       return {
         success: false,
-        message: "Invalid credentials",
+        message: "Server Error",
       };
     }
   } catch (error) {
@@ -42,7 +42,7 @@ export const login = async (username, password) => {
       // Server responded with error
       return {
         success: false,
-        message: error.response.data?.message || "Invalid credentials",
+        message: error.response.data?.message || "Server Error",
       };
     } else if (error.request) {
       // Network error
