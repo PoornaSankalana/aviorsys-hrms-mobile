@@ -21,7 +21,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor to handle errors
@@ -30,14 +30,17 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/login/authenticate")
+    ) {
       // Token expired or invalid, logout user
       await AsyncStorage.removeItem("authToken");
       await AsyncStorage.removeItem("userData");
       // You can also trigger a navigation to login screen here
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

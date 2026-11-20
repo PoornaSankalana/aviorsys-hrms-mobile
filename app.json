@@ -25,6 +25,10 @@
               "NSExceptionAllowsInsecureHTTPLoads": true,
               "NSIncludesSubdomains": true,
               "NSExceptionRequiresForwardSecrecy": false
+            },
+            "10.10.2.5": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionRequiresForwardSecrecy": false
             }
           }
         }

@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Modal,
   ScrollView,
@@ -7,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../../utils/constants"; // adjust path as needed
 
 const DropdownModal = ({
@@ -18,15 +18,19 @@ const DropdownModal = ({
   displayKey,
   valueKey,
 }) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       visible={visible}
       transparent={true}
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
@@ -36,7 +40,13 @@ const DropdownModal = ({
           </View>
 
           {/* Modal List */}
-          <ScrollView style={styles.modalList}>
+          <ScrollView
+            style={styles.modalList}
+            contentContainerStyle={{
+              paddingBottom: Math.max(insets.bottom, 16) + 16,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
             {data.map((item, index) => (
               <TouchableOpacity
                 key={index}

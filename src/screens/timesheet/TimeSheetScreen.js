@@ -1,5 +1,5 @@
 import { useIsFocused } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
@@ -16,6 +17,45 @@ import DropdownModal from "../../components/common/DropdownModal";
 import ProcessingLoader from "../../components/common/ProcessingLoader";
 import api from "../../services/api";
 import { API_ENDPOINTS, COLORS, SIZES } from "../../utils/constants";
+
+const ROW_HEIGHT = 44;
+const HEADER_HEIGHT = 44;
+const DATE_COL_WIDTH = 90;
+
+// All columns except Date (Date is the frozen column)
+const LIST_COLUMNS = [
+  { title: "Day", width: 90, render: (d) => d.TypeTitle },
+  { title: "Status", width: 70, render: (d) => d.PrAb },
+  { title: "In Time", width: 80, render: (d) => d.InTime || "-" },
+  { title: "Out Time", width: 80, render: (d) => d.OutTime || "-" },
+  { title: "Late Min", width: 80, render: (d) => d.LateMinutes || 0 },
+  {
+    title: "Early Dept Min",
+    width: 120,
+    render: (d) => d.EarlyDepatureMinutes || 0,
+  },
+  {
+    title: "Leave Type",
+    width: 100,
+    render: (d) => (d.LeaveType !== "N/A" ? d.LeaveType : "-"),
+  },
+  {
+    title: "Leave Amount",
+    width: 100,
+    render: (d) => (d.LeaveAmount !== undefined ? d.LeaveAmount : "-"),
+  },
+  {
+    title: "Leave Status",
+    width: 100,
+    render: (d) => (d.LeaveStatus !== "N/A" ? d.LeaveStatus : "-"),
+  },
+  {
+    title: "Request Type",
+    width: 100,
+    render: (d) =>
+      d.RequestType && d.RequestType !== " - " ? d.RequestType : "-",
+  },
+];
 
 // Optional: Configure calendar locale
 LocaleConfig.locales["en"] = {
@@ -76,6 +116,9 @@ const TimesheetScreen = () => {
   const [markedDates, setMarkedDates] = useState({});
   const [cancellingLeave, setCancellingLeave] = useState(false);
 
+  const { height: windowHeight } = useWindowDimensions();
+  const headerScrollRef = useRef(null);
+
   const months = [
     "January",
     "February",
@@ -134,7 +177,7 @@ const TimesheetScreen = () => {
   const loadTimesheet = async () => {
     const { firstDate, lastDate } = getMonthDateRange(
       selectedYear,
-      selectedMonth
+      selectedMonth,
     );
 
     // Validation: Check if selected month is in the future
@@ -143,21 +186,21 @@ const TimesheetScreen = () => {
     const selectedDate = new Date(
       parseInt(selectedYear),
       selectedMonthIndex,
-      1
+      1,
     );
 
     // Set to first day of current month for comparison
     const currentMonthStart = new Date(
       today.getFullYear(),
       today.getMonth(),
-      1
+      1,
     );
 
     if (selectedDate > currentMonthStart) {
       Alert.alert(
         "Error",
         "Cannot load timesheet for future months. Please select current or past month.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return;
     }
@@ -181,23 +224,39 @@ const TimesheetScreen = () => {
     }
   };
 
+  // A leave is "bulk" when more than one day shares the same leave header
+  const isBulkLeave = (leaveRequestId) => {
+    if (!leaveRequestId) return false;
+    const sameRequestDays = timesheetData.filter(
+      (d) =>
+        String(d.LeaveHeaderIdx) === String(leaveRequestId) &&
+        d.LeaveType &&
+        d.LeaveType !== "N/A",
+    );
+    return sameRequestDays.length > 1;
+  };
+
   const cancelLeave = async (leaveRequestId) => {
+    const isBulk = isBulkLeave(leaveRequestId);
+
     Alert.alert(
-      "Cancel Leave",
-      "Are you sure you want to cancel this leave request?",
+      isBulk ? "Bulk Leave Request" : "Cancel Leave",
+      isBulk
+        ? "This leave is part of a bulk leave request. Cancelling this leave will cancel the entire bulk leave request. Do you want to continue?"
+        : "Are you sure you want to cancel this leave request?",
       [
         {
           text: "No",
           style: "cancel",
         },
         {
-          text: "Yes, Cancel",
+          text: isBulk ? "Yes, Cancel All" : "Yes, Cancel",
           onPress: async () => {
             setCancellingLeave(true);
             setShowDateDetails(false);
             try {
               const response = await api.post(
-                `${API_ENDPOINTS.CANCEL_LEAVE}?leaveHeaderIdx=${leaveRequestId}`
+                `${API_ENDPOINTS.CANCEL_LEAVE}?leaveHeaderIdx=${leaveRequestId}`,
               );
 
               if (response.data[0].rsltType == 1) {
@@ -214,7 +273,7 @@ const TimesheetScreen = () => {
               } else {
                 Alert.alert(
                   "Error",
-                  response.data[0].outputInfo || "Failed to cancel leave"
+                  response.data[0].outputInfo || "Failed to cancel leave",
                 );
               }
             } catch (error) {
@@ -225,7 +284,7 @@ const TimesheetScreen = () => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -393,6 +452,8 @@ const TimesheetScreen = () => {
         transparent={true}
         visible={showDateDetails}
         onRequestClose={() => setShowDateDetails(false)}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         <TouchableWithoutFeedback onPress={() => setShowDateDetails(false)}>
           <View style={styles.modalOverlay}>
@@ -425,16 +486,16 @@ const TimesheetScreen = () => {
                           {selectedDate?.LeaveAmount != 0
                             ? selectedDate?.LeaveType
                             : selectedDate?.DayTitle === "Saturday"
-                            ? "Saturday"
-                            : selectedDate?.DayTitle === "Sunday"
-                            ? "Sunday"
-                            : selectedDate?.IsHoliDay
-                            ? selectedDate.TypeTitle
-                            : selectedDate?.PrAb === "Ab"
-                            ? "Absent"
-                            : selectedDate?.PrAb === "Pr"
-                            ? "Present"
-                            : "No Record"}
+                              ? "Saturday"
+                              : selectedDate?.DayTitle === "Sunday"
+                                ? "Sunday"
+                                : selectedDate?.IsHoliDay
+                                  ? selectedDate.TypeTitle
+                                  : selectedDate?.PrAb === "Ab"
+                                    ? "Absent"
+                                    : selectedDate?.PrAb === "Pr"
+                                      ? "Present"
+                                      : "No Record"}
                         </Text>
                       </View>
 
@@ -449,8 +510,8 @@ const TimesheetScreen = () => {
                               selectedDate?.PrAb === "Pr"
                                 ? styles.presentText
                                 : selectedDate?.PrAb === "Ab"
-                                ? styles.absentText
-                                : styles.neutralText,
+                                  ? styles.absentText
+                                  : styles.neutralText,
                             ]}
                           >
                             {selectedDate?.PrAb || "-"}
@@ -519,8 +580,8 @@ const TimesheetScreen = () => {
                                   selectedDate?.LeaveStatus === "Pending"
                                     ? styles.pendingText
                                     : selectedDate?.LeaveStatus === "Approved"
-                                    ? styles.approvedText
-                                    : {},
+                                      ? styles.approvedText
+                                      : {},
                                 ]}
                               >
                                 {selectedDate?.LeaveStatus !== "N/A"
@@ -574,27 +635,6 @@ const TimesheetScreen = () => {
                             )}
                           </View>
                         )}
-
-                      {/* Additional Info */}
-                      {/* <View style={styles.detailSection}>
-                        <Text style={styles.sectionTitle}>
-                          Additional Information
-                        </Text>
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>
-                            Payroll Category:
-                          </Text>
-                          <Text style={styles.detailValue}>
-                            {selectedDate?.PayrollCategory || "-"}
-                          </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Unit:</Text>
-                          <Text style={styles.detailValue}>
-                            {selectedDate?.UnitName || "-"}
-                          </Text>
-                        </View>
-                      </View> */}
                     </View>
                   </>
                 ) : (
@@ -819,7 +859,7 @@ const TimesheetScreen = () => {
             <View style={styles.calendarContainer}>
               <Calendar
                 current={`${selectedYear}-${String(
-                  months.indexOf(selectedMonth) + 1
+                  months.indexOf(selectedMonth) + 1,
                 ).padStart(2, "0")}-01`}
                 onDayPress={handleDayPress}
                 markedDates={markedDates}
@@ -832,108 +872,101 @@ const TimesheetScreen = () => {
                 renderArrow={() => null}
                 disableMonthChange={true}
               />
-
-              {/* Stats Summary */}
-              {/* <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>
-                    {timesheetData.filter((d) => d.PrAb === "Pr").length}
-                  </Text>
-                  <Text style={styles.statLabel}>Present</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>
-                    {timesheetData.filter((d) => d.PrAb === "Ab").length}
-                  </Text>
-                  <Text style={styles.statLabel}>Absent</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>
-                    {timesheetData.filter((d) => d.LeaveType !== "N/A").length}
-                  </Text>
-                  <Text style={styles.statLabel}>Leaves</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>
-                    {timesheetData.filter((d) => d.IsHoliDay).length}
-                  </Text>
-                  <Text style={styles.statLabel}>Holidays</Text>
-                </View>
-              </View> */}
             </View>
           ) : (
-            // List View (existing table view - keep your original table code here)
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {/* Your existing table code */}
-              <View>
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.tableCell, { width: 90 }]}>Date</Text>
-                  <Text style={[styles.tableCell, { width: 90 }]}>Day</Text>
-                  <Text style={[styles.tableCell, { width: 70 }]}>Status</Text>
-                  <Text style={[styles.tableCell, { width: 70 }]}>In</Text>
-                  <Text style={[styles.tableCell, { width: 70 }]}>Out</Text>
-                  <Text style={[styles.tableCell, { width: 70 }]}>Late</Text>
-                  <Text style={[styles.tableCell, { width: 80 }]}>Early</Text>
-                  <Text style={[styles.tableCell, { width: 100 }]}>
-                    Leave Type
-                  </Text>
-                  <Text style={[styles.tableCell, { width: 100 }]}>
-                    Leave Amount
-                  </Text>
-                  <Text style={[styles.tableCell, { width: 100 }]}>
-                    Leave Status
-                  </Text>
-                  <Text style={[styles.tableCell, { width: 100 }]}>
-                    Request Type
-                  </Text>
+            /* List View with frozen header + frozen Date column */
+            <View style={styles.listTable}>
+              {/* Frozen header row */}
+              <View style={styles.listHeaderRow}>
+                <View style={[styles.listHeaderCell, styles.frozenDateCell]}>
+                  <Text style={styles.listHeaderText}>Date</Text>
                 </View>
-                {timesheetData.map((day, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.tableRow,
-                      { backgroundColor: getDayColor(day) },
-                    ]}
-                  >
-                    <Text style={[styles.tableCell, { width: 90 }]}>
-                      {day.Date}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 90 }]}>
-                      {day.TypeTitle}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 70 }]}>
-                      {day.PrAb}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 70 }]}>
-                      {day.InTime || "-"}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 70 }]}>
-                      {day.OutTime || "-"}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 70 }]}>
-                      {day.LateMinutes || 0}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 80 }]}>
-                      {day.EarlyDepatureMinutes || 0}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 100 }]}>
-                      {day.LeaveType !== "N/A" ? day.LeaveType : "-"}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 100 }]}>
-                      {day.LeaveAmount !== undefined ? day.LeaveAmount : "-"}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 100 }]}>
-                      {day.LeaveStatus !== "N/A" ? day.LeaveStatus : "-"}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 100 }]}>
-                      {day.RequestType && day.RequestType !== " - "
-                        ? day.RequestType
-                        : "-"}
-                    </Text>
-                  </View>
-                ))}
+                <ScrollView
+                  ref={headerScrollRef}
+                  horizontal
+                  scrollEnabled={false}
+                  showsHorizontalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                >
+                  {LIST_COLUMNS.map((col) => (
+                    <View
+                      key={col.title}
+                      style={[styles.listHeaderCell, { width: col.width }]}
+                    >
+                      <Text style={styles.listHeaderText}>{col.title}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
-            </ScrollView>
+
+              {/* Vertical scroll (header stays above it) */}
+              <ScrollView
+                nestedScrollEnabled
+                style={{ maxHeight: windowHeight * 0.6 }}
+                showsVerticalScrollIndicator
+              >
+                <View style={{ flexDirection: "row" }}>
+                  {/* Frozen Date column (scrolls vertically only) */}
+                  <View style={styles.frozenDateColumn}>
+                    {timesheetData.map((day, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.listRow,
+                          styles.frozenDateCell,
+                          { backgroundColor: getDayColor(day) },
+                        ]}
+                      >
+                        <Text style={styles.listCellText} numberOfLines={1}>
+                          {day.Date}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Horizontally scrollable columns */}
+                  <ScrollView
+                    horizontal
+                    nestedScrollEnabled
+                    style={{ flex: 1 }}
+                    showsHorizontalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    onScroll={(e) =>
+                      headerScrollRef.current?.scrollTo({
+                        x: e.nativeEvent.contentOffset.x,
+                        animated: false,
+                      })
+                    }
+                  >
+                    <View>
+                      {timesheetData.map((day, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.listRow,
+                            { backgroundColor: getDayColor(day) },
+                          ]}
+                        >
+                          {LIST_COLUMNS.map((col) => (
+                            <View
+                              key={col.title}
+                              style={[styles.listCell, { width: col.width }]}
+                            >
+                              <Text
+                                style={styles.listCellText}
+                                numberOfLines={1}
+                              >
+                                {col.render(day)}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              </ScrollView>
+            </View>
           )
         ) : (
           <View style={styles.emptyContainer}>
@@ -1120,30 +1153,6 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.md,
   },
 
-  // Stats Styles
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#F9FAFB",
-    padding: SIZES.md,
-    borderRadius: 12,
-    marginTop: SIZES.md,
-  },
-  statItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textLight,
-  },
-
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -1191,9 +1200,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: COLORS.textLight,
   },
-  detailsContent: {
-    // flex: 10,
-  },
+  detailsContent: {},
   statusBadge: {
     alignSelf: "flex-start",
     paddingHorizontal: SIZES.md,
@@ -1261,36 +1268,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  // Existing table styles (keep these for list view)
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#f3f4f6",
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 12,
-    paddingHorizontal: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    borderRadius: 0,
-    marginVertical: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tableCell: {
-    fontSize: 14,
-    paddingHorizontal: 5,
-    color: COLORS.text,
-    textAlign: "center",
-  },
-
   emptyContainer: {
     backgroundColor: COLORS.white,
     padding: SIZES.xxl,
@@ -1353,6 +1330,61 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 16,
     fontWeight: "bold",
+  },
+
+  // List view (frozen header + frozen Date column)
+  listTable: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  listHeaderRow: {
+    flexDirection: "row",
+    height: HEADER_HEIGHT,
+    backgroundColor: "#f3f4f6",
+    borderBottomWidth: 1,
+    borderBottomColor: "#d1d5db",
+  },
+  listHeaderCell: {
+    height: HEADER_HEIGHT,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 5,
+  },
+  listHeaderText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: COLORS.text,
+    textAlign: "center",
+  },
+  listRow: {
+    flexDirection: "row",
+    height: ROW_HEIGHT,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  listCell: {
+    height: ROW_HEIGHT,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 5,
+  },
+  listCellText: {
+    fontSize: 14,
+    color: COLORS.text,
+    textAlign: "center",
+  },
+  frozenDateColumn: {
+    width: DATE_COL_WIDTH,
+    backgroundColor: COLORS.white,
+  },
+  frozenDateCell: {
+    width: DATE_COL_WIDTH,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRightWidth: 1,
+    borderRightColor: "#d1d5db",
   },
 });
 

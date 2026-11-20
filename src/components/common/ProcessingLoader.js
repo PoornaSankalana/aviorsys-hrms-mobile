@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Animated, Modal, StyleSheet, Text, View } from "react-native";
 import { COLORS } from "../../utils/constants";
 
@@ -15,7 +15,7 @@ const ProcessingLoader = ({ visible = false, message = "Processing..." }) => {
           toValue: 1,
           duration: 1000,
           useNativeDriver: true,
-        })
+        }),
       ).start();
     }
   }, [visible, spinValue]);
@@ -35,7 +35,7 @@ const ProcessingLoader = ({ visible = false, message = "Processing..." }) => {
             duration: 800,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     }
   }, [visible, scaleValue]);
@@ -55,7 +55,7 @@ const ProcessingLoader = ({ visible = false, message = "Processing..." }) => {
             duration: 1000,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     }
   }, [visible, pulseValue]);
@@ -68,7 +68,13 @@ const ProcessingLoader = ({ visible = false, message = "Processing..." }) => {
   if (!visible) return null;
 
   return (
-    <Modal transparent visible={visible} animationType="fade">
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={styles.overlay}>
         <View style={styles.loaderContainer}>
           {/* Outer pulsing ring */}

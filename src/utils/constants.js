@@ -1,5 +1,5 @@
 // Update this with your actual backend API URL
-export const API_BASE_URL = "http://api-hrms.aviorsys.com/api";
+export const API_BASE_URL = "http://10.10.2.5:8040/api";
 
 export const API_ENDPOINTS = {
   //auth

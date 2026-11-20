@@ -33,16 +33,23 @@ export const login = async (username, password) => {
     } else {
       return {
         success: false,
-        message: "Server Error",
+        message: response.data?.message || "Invalid username or password.",
       };
     }
   } catch (error) {
     console.log(error);
     if (error.response) {
-      // Server responded with error
+      const status = error.response.status;
+      if (status === 400 || status === 401 || status === 403) {
+        return {
+          success: false,
+          message:
+            error.response.data?.message || "Invalid username or password.",
+        };
+      }
       return {
         success: false,
-        message: error.response.data?.message || "Server Error",
+        message: "Something went wrong. Please try again later.",
       };
     } else if (error.request) {
       // Network error

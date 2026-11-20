@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Modal,
   Pressable,
@@ -25,6 +24,8 @@ const ConfirmationModal = ({
       visible={visible}
       animationType="fade"
       onRequestClose={onCancel}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <Pressable style={styles.overlay} onPress={onCancel}>
         <Pressable style={styles.modalContainer}>
